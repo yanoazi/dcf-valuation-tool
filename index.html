@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#e5e7eb">
+    <title>動態 DCF 估值計算機</title>
+    
+    <!-- 自定義股票估值主題 Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='grad1' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23c0c0c0;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23808080;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='url(%23grad1)'/%3E%3Cpath d='M16 32 L24 24 L32 28 L40 20 L48 24' stroke='%23ffffff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='24' cy='24' r='2' fill='%23ffffff'/%3E%3Ccircle cx='32' cy='28' r='2' fill='%23ffffff'/%3E%3Ccircle cx='40' cy='20' r='2' fill='%23ffffff'/%3E%3Ccircle cx='48' cy='24' r='2' fill='%23ffffff'/%3E%3Ctext x='32' y='50' text-anchor='middle' fill='%23ffffff' font-family='Arial, sans-serif' font-size='12' font-weight='bold'%3E$%3C/text%3E%3C/svg%3E">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, 
+                #f8fafc 0%, 
+                #e2e8f0 25%, 
+                #cbd5e1 50%, 
+                #94a3b8 75%, 
+                #64748b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Liquid Glass 背景效果 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(226, 232, 240, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(203, 213, 225, 0.3) 0%, transparent 50%);
+            animation: liquidMove 15s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes liquidMove {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-20px, -20px) scale(1.05); }
+            66% { transform: translate(20px, 10px) scale(0.95); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .liquid-glass-card {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.4) 0%,
+                rgba(248, 250, 252, 0.3) 50%,
+                rgba(241, 245, 249, 0.4) 100%);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 28px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 36px;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Liquid Glass 內部光效 */
+        .liquid-glass-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                transparent 30%, 
+                rgba(255, 255, 255, 0.1) 50%, 
+                transparent 70%);
+            animation: liquidShine 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes liquidShine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 32px;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.6) 0%,
+                rgba(248, 250, 252, 0.4) 100%);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            border-radius: 14px;
+            font-size: 16px;
+            color: #1f2937;
+            transition: all 0.3s ease;
+            outline: none;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.05),
+                0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .form-control::placeholder {
+            color: #6b7280;
+        }
+
+        .form-control:focus {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.8) 0%,
+                rgba(248, 250, 252, 0.6) 100%);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 
+                0 0 0 3px rgba(59, 130, 246, 0.1),
+                inset 0 2px 4px rgba(0, 0, 0, 0.05),
+                0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        select.form-control {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 16px;
+            padding-right: 48px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, 
+                #475569 0%,
+                #334155 50%,
+                #1e293b 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            margin-top: 8px;
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, 
+                #334155 0%,
+                #1e293b 50%,
+                #0f172a 100%);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(148, 163, 184, 0.4), 
+                transparent);
+            margin: 24px 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .status-area {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.5) 0%,
+                rgba(248, 250, 252, 0.3) 100%);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            padding: 14px 18px;
+            text-align: center;
+            font-size: 14px;
+            color: #374151;
+            margin-top: 16px;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.05),
+                0 1px 2px rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.6) 0%,
+                rgba(248, 250, 252, 0.4) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 18px;
+            padding: 28px;
+            margin-top: 20px;
+            animation: slideUp 0.5s ease-out;
+            box-shadow: 
+                0 8px 24px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            position: relative;
+            z-index: 2;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 16px;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .result-comparison {
+            font-size: 16px;
+            color: #374151;
+            text-align: center;
+            line-height: 1.6;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+        }
+
+        /* 估值結果圖標 */
+        .result-icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .trend-up {
+            color: #059669;
+        }
+
+        .trend-down {
+            color: #dc2626;
+        }
+
+        .trend-neutral {
+            color: #6b7280;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(55, 65, 81, 0.3);
+            border-top: 2px solid #374151;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+            
+            .liquid-glass-card {
+                padding: 28px;
+                border-radius: 24px;
+            }
+            
+            .title {
+                font-size: 24px;
+                margin-bottom: 28px;
+            }
+            
+            .form-control {
+                padding: 14px;
+                font-size: 16px;
+            }
+            
+            .btn {
+                padding: 16px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                max-width: 100%;
+            }
+            
+            .liquid-glass-card {
+                padding: 24px;
+                border-radius: 20px;
+            }
+            
+            .title {
+                font-size: 22px;
+                margin-bottom: 24px;
+            }
+        }
+
+        /* 觸摸設備優化 */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover {
+                background: linear-gradient(135deg, 
+                    #475569 0%,
+                    #334155 50%,
+                    #1e293b 100%);
+                transform: none;
+            }
+            
+            .btn:active {
+                background: linear-gradient(135deg, 
+                    #334155 0%,
+                    #1e293b 50%,
+                    #0f172a 100%);
+                transform: scale(0.98);
+            }
+        }
+
+        /* 確保垂直居中 */
+        @media (min-height: 600px) {
+            body {
+                align-items: center;
+            }
+        }
+
+        @media (max-height: 600px) {
+            body {
+                align-items: flex-start;
+                padding-top: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="liquid-glass-card">
+            <h1 class="title">動態 DCF 估值計算機</h1>
+
+            <!-- 公司選擇器 -->
+            <div class="form-group">
+                <label for="companySelector" class="form-label">選擇分析公司：</label>
+                <select id="companySelector" class="form-control" disabled>
+                    <option value="">載入中...</option>
+                </select>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- DCF 輸入區域 -->
+            <div id="dcfInputs" class="hidden">
+                <div class="form-group">
+                    <label for="futureGrowthRate" class="form-label">預期未來五年年成長率 (%)：</label>
+                    <input type="number" step="0.01" inputmode="decimal" id="futureGrowthRate" class="form-control" placeholder="4.00">
+                </div>
+
+                <div class="form-group">
+                    <label for="terminalGrowthRate" class="form-label">永續成長率 (%)：</label>
+                    <input type="number" step="0.01" inputmode="decimal" id="terminalGrowthRate" class="form-control" placeholder="1.05">
+                </div>
+
+                <div class="form-group">
+                    <label for="wacc" class="form-label">折現率 (WACC) (%)：</label>
+                    <input type="number" step="0.01" inputmode="decimal" id="wacc" class="form-control" placeholder="9.18">
+                </div>
+
+                <div class="form-group">
+                    <label for="currentPrice" class="form-label">目前股價 ($)：</label>
+                    <input type="number" step="0.01" inputmode="decimal" id="currentPrice" class="form-control" placeholder="輸入目前股價">
+                </div>
+
+                <button id="calculateValuation" class="btn" disabled>請先選擇公司</button>
+            </div>
+
+            <!-- 狀態顯示區域 -->
+            <div id="statusArea" class="status-area">請稍候，正在初始化...</div>
+
+            <!-- 估值結果顯示區 -->
+            <div id="valuationResult" class="result-card hidden">
+                <div id="calculatedValue" class="result-value"></div>
+                <div id="priceComparison" class="result-comparison"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // API URL
+        const BASE_API_URL = "https://script.google.com/macros/s/AKfycbxy5nif3-CmI8wiLClZige4ZCKgV_BZPxrmTx_PlGSWRGQXDQL4PnGdGQ7od2FHWz1GoQ/exec";
+
+        async function initializeApp() {
+            setupEventListeners();
+            initializeMobileOptimizations();
+            await loadCompanyList();
+        }
+
+        function initializeMobileOptimizations() {
+            // 防止雙擊縮放
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+
+            // 輸入框優化
+            const inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                });
+
+                input.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9.-]/g, '');
+                });
+            });
+
+            // 選擇框優化
+            const selector = document.getElementById('companySelector');
+            selector.addEventListener('focus', function() {
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            });
+        }
+
+        function setupEventListeners() {
+            document.getElementById('companySelector').addEventListener('change', handleCompanySelection);
+            document.getElementById('calculateValuation').addEventListener('click', handleCalculation);
+        }
+
+        async function loadCompanyList() {
+            const selector = document.getElementById('companySelector');
+            const statusArea = document.getElementById('statusArea');
+            
+            showStatus('正在獲取公司列表...', 'loading');
+
+            const url = `${BASE_API_URL}?action=getCompanyList`;
+            const response = await fetchAPI(url);
+
+            if (response && response.success) {
+                selector.innerHTML = '<option value="">-- 請選擇一家公司 --</option>';
+                response.data.companies.forEach(company => {
+                    selector.add(new Option(company, company));
+                });
+                selector.disabled = false;
+                showStatus('請選擇一家公司進行分析。');
+            } else {
+                showStatus(`錯誤：${response ? response.message : '無法連接伺服器'}`, 'error');
+            }
+        }
+
+        async function handleCompanySelection() {
+            const companyName = document.getElementById('companySelector').value;
+            const dcfInputs = document.getElementById('dcfInputs');
+            const calculateBtn = document.getElementById('calculateValuation');
+            
+            dcfInputs.classList.add('hidden');
+            calculateBtn.disabled = true;
+            calculateBtn.textContent = '請先選擇公司';
+            document.getElementById('valuationResult').classList.add('hidden');
+
+            if (!companyName) {
+                showStatus('請選擇一家公司進行分析。');
+                return;
+            }
+            
+            showStatus(`正在獲取 ${companyName} 的預設參數...`, 'loading');
+            
+            const url = `${BASE_API_URL}?action=getCompanyDefaults&company=${encodeURIComponent(companyName)}`;
+            const response = await fetchAPI(url);
+            
+            if (response && response.success) {
+                populateDefaultInputs(response.data.defaults);
+                dcfInputs.classList.remove('hidden');
+                calculateBtn.disabled = false;
+                calculateBtn.textContent = '計算估值';
+                showStatus(`已載入 ${companyName} 的預設值，可自行修改或直接計算。`, 'success');
+            } else {
+                showStatus(`獲取預設值失敗: ${response ? response.message : '無法連接'}`, 'error');
+                alert(`獲取預設值失敗: ${response ? response.message : '無法連接'}`);
+            }
+        }
+
+        function populateDefaultInputs(defaults) {
+            document.getElementById('futureGrowthRate').value = (defaults.futureGrowth * 100).toFixed(2);
+            document.getElementById('terminalGrowthRate').value = (defaults.terminalGrowth * 100).toFixed(2);
+            document.getElementById('wacc').value = (defaults.wacc * 100).toFixed(2);
+            document.getElementById('currentPrice').value = '';
+        }
+
+        async function handleCalculation() {
+            const companyName = document.getElementById('companySelector').value;
+            const futureGrowth = document.getElementById('futureGrowthRate').value;
+            const terminalGrowth = document.getElementById('terminalGrowthRate').value;
+            const wacc = document.getElementById('wacc').value;
+            const currentPrice = document.getElementById('currentPrice').value;
+
+            if (!companyName || !futureGrowth || !terminalGrowth || !wacc || !currentPrice) {
+                alert('所有欄位皆為必填。');
+                return;
+            }
+
+            const calculateBtn = document.getElementById('calculateValuation');
+            calculateBtn.disabled = true;
+            calculateBtn.innerHTML = '<span class="loading-spinner"></span>計算中...';
+            showStatus('正在向後端請求計算...', 'loading');
+            document.getElementById('valuationResult').classList.add('hidden');
+
+            const params = new URLSearchParams({
+                action: 'calculateDCF',
+                company: companyName,
+                futureGrowth: futureGrowth,
+                terminalGrowth: terminalGrowth,
+                wacc: wacc
+            });
+            const url = `${BASE_API_URL}?${params.toString()}`;
+
+            const response = await fetchAPI(url);
+            
+            if (response && response.success) {
+                const fairValue = response.data.fairValue;
+                displayValuationResult(fairValue, parseFloat(currentPrice));
+                showStatus(`${companyName} 估值計算完成。`, 'success');
+            } else {
+                const errorMessage = response ? response.message : '未知的後端錯誤';
+                showStatus(`計算失敗：${errorMessage}`, 'error');
+                alert(`計算失敗：${errorMessage}`);
+            }
+
+            calculateBtn.disabled = false;
+            calculateBtn.textContent = '計算估值';
+        }
+
+        async function fetchAPI(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`網路回應錯誤: ${response.statusText}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch API 失敗:', error);
+                return { success: false, message: error.message };
+            }
+        }
+
+        function displayValuationResult(fairValue, currentPrice) {
+            const resultDiv = document.getElementById('valuationResult');
+            const valueDiv = document.getElementById('calculatedValue');
+            const comparisonDiv = document.getElementById('priceComparison');
+
+            const upside = ((fairValue - currentPrice) / currentPrice * 100);
+            
+            // 根據估值結果選擇對應的圖標
+            let trendIcon = '';
+            let trendClass = '';
+            let trendText = '';
+            
+            if (Math.abs(upside) < 5) {
+                // 合理估值 (±5%以內)
+                trendIcon = '⚖️';
+                trendClass = 'trend-neutral';
+                trendText = '合理估值';
+            } else if (upside > 0) {
+                // 被低估 (上漲空間)
+                trendIcon = '📈';
+                trendClass = 'trend-up';
+                trendText = '潛在上漲空間';
+            } else {
+                // 被高估 (下跌風險)
+                trendIcon = '📉';
+                trendClass = 'trend-down';
+                trendText = '潛在下跌風險';
+            }
+
+            valueDiv.innerHTML = `DCF 公允價值: $${fairValue.toFixed(2)}`;
+            comparisonDiv.innerHTML = `
+                當前股價: $${currentPrice.toFixed(2)}<br>
+                <span class="${trendClass}">
+                    <span class="result-icon">${trendIcon}</span>
+                    ${trendText}: ${Math.abs(upside).toFixed(1)}%
+                </span>
+            `;
+
+            resultDiv.classList.remove('hidden');
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusArea = document.getElementById('statusArea');
+            let icon = '';
+            
+            switch(type) {
+                case 'loading':
+                    icon = '<span class="loading-spinner"></span>';
+                    break;
+                case 'success':
+                    icon = '✅ ';
+                    break;
+                case 'error':
+                    icon = '❌ ';
+                    break;
+                default:
+                    icon = 'ℹ️ ';
+            }
+            
+            statusArea.innerHTML = `${icon}${message}`;
+        }
+    </script>
+</body>
+</html>
