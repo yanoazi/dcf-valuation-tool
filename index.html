@@ -7,12 +7,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#e5e7eb">
-    <title>動態 DCF 估值計算機</title>
+    <title>AI 智能 DCF 估值系統</title>
     
     <!-- 自定義股票估值主題 Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='grad1' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23c0c0c0;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23808080;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='url(%23grad1)'/%3E%3Cpath d='M16 32 L24 24 L32 28 L40 20 L48 24' stroke='%23ffffff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='24' cy='24' r='2' fill='%23ffffff'/%3E%3Ccircle cx='32' cy='28' r='2' fill='%23ffffff'/%3E%3Ccircle cx='40' cy='20' r='2' fill='%23ffffff'/%3E%3Ccircle cx='48' cy='24' r='2' fill='%23ffffff'/%3E%3Ctext x='32' y='50' text-anchor='middle' fill='%23ffffff' font-family='Arial, sans-serif' font-size='12' font-weight='bold'%3E$%3C/text%3E%3C/svg%3E">
     
     <style>
+        :root {
+            --color-success: #059669;
+            --color-error: #dc2626;
+            --color-warning: #d97706;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -83,7 +89,7 @@
 
         .container {
             width: 100%;
-            max-width: 480px;
+            max-width: 520px;
             margin: 0 auto;
         }
 
@@ -169,6 +175,16 @@
             text-align: center;
             margin-bottom: 32px;
             text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #475569;
+            text-align: center;
+            margin-bottom: 24px;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
             position: relative;
             z-index: 2;
         }
@@ -261,15 +277,11 @@
                 0 1px 2px rgba(255, 255, 255, 0.8);
         }
 
-        select.form-control {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            background-size: 16px;
-            padding-right: 48px;
+        .hint-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
         }
 
         .btn {
@@ -294,6 +306,13 @@
             position: relative;
             overflow: hidden;
             z-index: 2;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, 
+                #6b7280 0%,
+                #4b5563 50%,
+                #374151 100%);
         }
 
         .btn::before {
@@ -341,6 +360,13 @@
             box-shadow: 
                 0 8px 20px rgba(0, 0, 0, 0.2),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: linear-gradient(135deg, 
+                #4b5563 0%,
+                #374151 50%,
+                #1f2937 100%);
         }
 
         .btn:active:not(:disabled) {
@@ -500,11 +526,11 @@
         }
 
         .trend-up {
-            color: #059669;
+            color: var(--color-success);
         }
 
         .trend-down {
-            color: #dc2626;
+            color: var(--color-error);
         }
 
         .trend-neutral {
@@ -529,6 +555,53 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* 階段指示器 */
+        .stage-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .stage-step {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .stage-step.active {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .stage-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stage-step.active .stage-number {
+            background: linear-gradient(135deg, #475569, #334155);
+            color: white;
+        }
+
+        .stage-connector {
+            width: 40px;
+            height: 1px;
+            background: rgba(148, 163, 184, 0.4);
+            margin: 0 16px;
         }
 
         /* 響應式設計 */
@@ -572,6 +645,15 @@
                 font-size: 22px;
                 margin-bottom: 24px;
             }
+
+            .stage-step {
+                font-size: 12px;
+            }
+
+            .stage-connector {
+                width: 20px;
+                margin: 0 8px;
+            }
         }
 
         /* 觸摸設備優化 */
@@ -611,33 +693,59 @@
 <body>
     <div class="container">
         <div class="liquid-glass-card">
-            <h1 class="title">動態 DCF 估值計算機</h1>
-
-            <!-- 公司選擇器 -->
-            <div class="form-group">
-                <label for="companySelector" class="form-label">選擇分析公司：</label>
-                <select id="companySelector" class="form-control" disabled>
-                    <option value="">載入中...</option>
-                </select>
+            <!-- 階段指示器 -->
+            <div class="stage-indicator">
+                <div class="stage-step active" id="stage1-indicator">
+                    <div class="stage-number">1</div>
+                    <span>數據獲取</span>
+                </div>
+                <div class="stage-connector"></div>
+                <div class="stage-step" id="stage2-indicator">
+                    <div class="stage-number">2</div>
+                    <span>估值計算</span>
+                </div>
             </div>
 
-            <div class="divider"></div>
+            <!-- 第一階段：數據獲取 -->
+            <div id="view-data-fetch">
+                <h1 class="title">AI 智能 DCF 估值系統</h1>
+                <p class="subtitle">🤖 AI Agent 自動獲取最新財報數據，精準估值分析</p>
 
-            <!-- DCF 輸入區域 -->
-            <div id="dcfInputs" class="hidden">
+                <div class="form-group">
+                    <label for="tickerInput" class="form-label">股票代碼：</label>
+                    <input type="text" id="tickerInput" class="form-control" placeholder="例如：AAPL, TSLA, NVDA" style="text-transform: uppercase;">
+                </div>
+
+                <button id="fetchDataBtn" class="btn">🚀 啟動 AI Agent 獲取財報</button>
+
+                <div id="fetchStatus" class="status-area" style="display: none;"></div>
+            </div>
+
+            <!-- 第二階段：DCF 計算 -->
+            <div id="view-dcf-calculator" class="hidden">
+                <h1 class="title">DCF 估值計算</h1>
+                
+                <div id="dcf-intro" class="subtitle"></div>
+
+                <div class="divider"></div>
+
+                <!-- DCF 輸入區域 -->
                 <div class="form-group">
                     <label for="futureGrowthRate" class="form-label">預期未來五年年成長率 (%)：</label>
                     <input type="number" step="0.01" inputmode="decimal" id="futureGrowthRate" class="form-control" placeholder="4.00">
+                    <div id="futureGrowthHint" class="hint-text"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="terminalGrowthRate" class="form-label">永續成長率 (%)：</label>
                     <input type="number" step="0.01" inputmode="decimal" id="terminalGrowthRate" class="form-control" placeholder="1.05">
+                    <div id="terminalGrowthHint" class="hint-text"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="wacc" class="form-label">折現率 (WACC) (%)：</label>
                     <input type="number" step="0.01" inputmode="decimal" id="wacc" class="form-control" placeholder="9.18">
+                    <div id="waccHint" class="hint-text"></div>
                 </div>
 
                 <div class="form-group">
@@ -645,33 +753,58 @@
                     <input type="number" step="0.01" inputmode="decimal" id="currentPrice" class="form-control" placeholder="輸入目前股價">
                 </div>
 
-                <button id="calculateValuation" class="btn" disabled>請先選擇公司</button>
-            </div>
+                <button id="calculateValuationBtn" class="btn">📊 計算 DCF 估值</button>
+                <button id="backToStartBtn" class="btn btn-secondary">🔄 重新開始</button>
 
-            <!-- 狀態顯示區域 -->
-            <div id="statusArea" class="status-area">請稍候，正在初始化...</div>
+                <!-- 狀態顯示區域 -->
+                <div id="dcfStatus" class="status-area" style="display: none;"></div>
 
-            <!-- 估值結果顯示區 -->
-            <div id="valuationResult" class="result-card hidden">
-                <div id="calculatedValue" class="result-value"></div>
-                <div id="priceComparison" class="result-comparison"></div>
+                <!-- 估值結果顯示區 -->
+                <div id="valuationResult" class="result-card hidden">
+                    <div id="calculatedValue" class="result-value"></div>
+                    <div id="priceComparison" class="result-comparison"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', initializeApp);
+        // ======================================================
+        //  設定區域 - 請填入您的網址
+        // ======================================================
+        const N8N_WEBHOOK_URL = "https://yanoazi.zeabur.app/webhook-test/1e4fb531-9baf-4c29-b9b2-ceea04e94a07";
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxy5nif3-CmI8wiLClZige4ZCKgV_BZPxrmTx_PlGSWRGQXDQL4PnGdGQ7od2FHWz1GoQ/exec";
 
-        // API URL
-        const BASE_API_URL = "https://script.google.com/macros/s/AKfycbxy5nif3-CmI8wiLClZige4ZCKgV_BZPxrmTx_PlGSWRGQXDQL4PnGdGQ7od2FHWz1GoQ/exec";
+        // ======================================================
+        //  DOM 元素獲取
+        // ======================================================
+        const viewDataFetch = document.getElementById('view-data-fetch');
+        const viewDcfCalculator = document.getElementById('view-dcf-calculator');
+        const tickerInput = document.getElementById('tickerInput');
+        const fetchDataBtn = document.getElementById('fetchDataBtn');
+        const fetchStatus = document.getElementById('fetchStatus');
+        const calculateValuationBtn = document.getElementById('calculateValuationBtn');
+        const backToStartBtn = document.getElementById('backToStartBtn');
+        const dcfIntro = document.getElementById('dcf-intro');
+        const valuationResult = document.getElementById('valuationResult');
+        const dcfStatus = document.getElementById('dcfStatus');
+        const stage1Indicator = document.getElementById('stage1-indicator');
+        const stage2Indicator = document.getElementById('stage2-indicator');
 
-        async function initializeApp() {
-            setupEventListeners();
-            initializeMobileOptimizations();
-            await loadCompanyList();
-        }
+        // ======================================================
+        //  事件監聽
+        // ======================================================
+        fetchDataBtn.addEventListener('click', handleFetchData);
+        calculateValuationBtn.addEventListener('click', handleCalculateValuation);
+        backToStartBtn.addEventListener('click', resetToStart);
 
-        function initializeMobileOptimizations() {
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 輸入框優化
+            tickerInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+
             // 防止雙擊縮放
             let lastTouchEnd = 0;
             document.addEventListener('touchend', function (event) {
@@ -681,162 +814,155 @@
                 }
                 lastTouchEnd = now;
             }, false);
+        });
 
-            // 輸入框優化
-            const inputs = document.querySelectorAll('input[type="number"]');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    setTimeout(() => {
-                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }, 300);
-                });
-
-                input.addEventListener('input', function() {
-                    this.value = this.value.replace(/[^0-9.-]/g, '');
-                });
-            });
-
-            // 選擇框優化
-            const selector = document.getElementById('companySelector');
-            selector.addEventListener('focus', function() {
-                setTimeout(() => {
-                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
-            });
-        }
-
-        function setupEventListeners() {
-            document.getElementById('companySelector').addEventListener('change', handleCompanySelection);
-            document.getElementById('calculateValuation').addEventListener('click', handleCalculation);
-        }
-
-        async function loadCompanyList() {
-            const selector = document.getElementById('companySelector');
-            const statusArea = document.getElementById('statusArea');
-            
-            showStatus('正在獲取公司列表...', 'loading');
-
-            const url = `${BASE_API_URL}?action=getCompanyList`;
-            const response = await fetchAPI(url);
-
-            if (response && response.success) {
-                selector.innerHTML = '<option value="">-- 請選擇一家公司 --</option>';
-                response.data.companies.forEach(company => {
-                    selector.add(new Option(company, company));
-                });
-                selector.disabled = false;
-                showStatus('請選擇一家公司進行分析。');
-            } else {
-                showStatus(`錯誤：${response ? response.message : '無法連接伺服器'}`, 'error');
-            }
-        }
-
-        async function handleCompanySelection() {
-            const companyName = document.getElementById('companySelector').value;
-            const dcfInputs = document.getElementById('dcfInputs');
-            const calculateBtn = document.getElementById('calculateValuation');
-            
-            dcfInputs.classList.add('hidden');
-            calculateBtn.disabled = true;
-            calculateBtn.textContent = '請先選擇公司';
-            document.getElementById('valuationResult').classList.add('hidden');
-
-            if (!companyName) {
-                showStatus('請選擇一家公司進行分析。');
-                return;
-            }
-            
-            showStatus(`正在獲取 ${companyName} 的預設參數...`, 'loading');
-            
-            const url = `${BASE_API_URL}?action=getCompanyDefaults&company=${encodeURIComponent(companyName)}`;
-            const response = await fetchAPI(url);
-            
-            if (response && response.success) {
-                populateDefaultInputs(response.data.defaults);
-                dcfInputs.classList.remove('hidden');
-                calculateBtn.disabled = false;
-                calculateBtn.textContent = '計算估值';
-                showStatus(`已載入 ${companyName} 的預設值，可自行修改或直接計算。`, 'success');
-            } else {
-                showStatus(`獲取預設值失敗: ${response ? response.message : '無法連接'}`, 'error');
-                alert(`獲取預設值失敗: ${response ? response.message : '無法連接'}`);
-            }
-        }
-
-        function populateDefaultInputs(defaults) {
-            document.getElementById('futureGrowthRate').value = (defaults.futureGrowth * 100).toFixed(2);
-            document.getElementById('terminalGrowthRate').value = (defaults.terminalGrowth * 100).toFixed(2);
-            document.getElementById('wacc').value = (defaults.wacc * 100).toFixed(2);
-            document.getElementById('currentPrice').value = '';
-        }
-
-        async function handleCalculation() {
-            const companyName = document.getElementById('companySelector').value;
-            const futureGrowth = document.getElementById('futureGrowthRate').value;
-            const terminalGrowth = document.getElementById('terminalGrowthRate').value;
-            const wacc = document.getElementById('wacc').value;
-            const currentPrice = document.getElementById('currentPrice').value;
-
-            if (!companyName || !futureGrowth || !terminalGrowth || !wacc || !currentPrice) {
-                alert('所有欄位皆為必填。');
+        // ======================================================
+        //  階段一：數據獲取邏輯
+        // ======================================================
+        async function handleFetchData() {
+            const ticker = tickerInput.value.toUpperCase().trim();
+            if (!ticker) {
+                alert('請輸入股票代碼。');
                 return;
             }
 
-            const calculateBtn = document.getElementById('calculateValuation');
-            calculateBtn.disabled = true;
-            calculateBtn.innerHTML = '<span class="loading-spinner"></span>計算中...';
-            showStatus('正在向後端請求計算...', 'loading');
-            document.getElementById('valuationResult').classList.add('hidden');
+            // 更新 UI 狀態
+            fetchDataBtn.disabled = true;
+            fetchDataBtn.innerHTML = '<span class="loading-spinner"></span>AI Agent 處理中...';
+            fetchStatus.style.display = 'block';
+            fetchStatus.innerHTML = `<p>🤖 正在觸發 n8n 工作流，AI Agent 開始瀏覽網頁...<br>此過程可能需要 1-2 分鐘，請耐心等候。</p>`;
+            fetchStatus.style.color = '#3b82f6';
 
-            const params = new URLSearchParams({
+            try {
+                // 向 n8n Webhook 發送請求
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`n8n 工作流執行失敗，伺服器回應: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    fetchStatus.innerHTML = `<p style="color: var(--color-success);">✅ ${result.message}</p><p>正在載入估值計算機...</p>`;
+                    // 成功後，轉換到第二階段
+                    setTimeout(() => switchToDcfView(ticker), 1500);
+                } else {
+                    throw new Error(result.message || 'n8n 工作流返回未知錯誤。');
+                }
+
+            } catch (error) {
+                fetchStatus.innerHTML = `<p style="color: var(--color-error);">❌ 錯誤: ${error.message}</p>`;
+                fetchDataBtn.disabled = false;
+                fetchDataBtn.textContent = '🚀 啟動 AI Agent 獲取財報';
+            }
+        }
+
+        // ======================================================
+        //  階段二：估值計算邏輯
+        // ======================================================
+        async function switchToDcfView(ticker) {
+            // 更新階段指示器
+            stage1Indicator.classList.remove('active');
+            stage2Indicator.classList.add('active');
+
+            // 切換介面
+            viewDataFetch.classList.add('hidden');
+            viewDcfCalculator.classList.remove('hidden');
+            dcfIntro.innerHTML = `✅ 已成功更新 <strong>${ticker}</strong> 的財報數據。<br>現在您可以基於最新數據進行估值分析。`;
+            
+            // 從 Google Apps Script 獲取預設值
+            dcfStatus.style.display = 'block';
+            dcfStatus.textContent = '正在從 Google Sheet 獲取預設參數...';
+            
+            try {
+                const url = `${GOOGLE_APPS_SCRIPT_URL}?action=getCompanyDefaults&company=${ticker}`;
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    const defaults = result.data.defaults;
+                    document.getElementById('futureGrowthRate').value = (defaults.futureGrowth * 100).toFixed(2);
+                    document.getElementById('terminalGrowthRate').value = (defaults.terminalGrowth * 100).toFixed(2);
+                    document.getElementById('wacc').value = (defaults.wacc * 100).toFixed(2);
+                    
+                    // 更新提示文字
+                    document.getElementById('futureGrowthHint').textContent = `表單預設: ${(defaults.futureGrowth * 100).toFixed(2)}%`;
+                    document.getElementById('terminalGrowthHint').textContent = `表單預設: ${(defaults.terminalGrowth * 100).toFixed(2)}%`;
+                    document.getElementById('waccHint').textContent = `表單預設: ${(defaults.wacc * 100).toFixed(2)}%`;
+                    
+                    dcfStatus.style.display = 'none';
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                dcfStatus.innerHTML = `<p style="color: var(--color-error);">獲取預設參數失敗: ${error.message}</p>`;
+            }
+        }
+
+        async function handleCalculateValuation() {
+            const ticker = tickerInput.value.toUpperCase().trim(); // 從第一階段的輸入框獲取 ticker
+            const params = {
                 action: 'calculateDCF',
-                company: companyName,
-                futureGrowth: futureGrowth,
-                terminalGrowth: terminalGrowth,
-                wacc: wacc
-            });
-            const url = `${BASE_API_URL}?${params.toString()}`;
+                company: ticker,
+                futureGrowth: document.getElementById('futureGrowthRate').value,
+                terminalGrowth: document.getElementById('terminalGrowthRate').value,
+                wacc: document.getElementById('wacc').value
+            };
 
-            const response = await fetchAPI(url);
-            
-            if (response && response.success) {
-                const fairValue = response.data.fairValue;
-                displayValuationResult(fairValue, parseFloat(currentPrice));
-                showStatus(`${companyName} 估值計算完成。`, 'success');
-            } else {
-                const errorMessage = response ? response.message : '未知的後端錯誤';
-                showStatus(`計算失敗：${errorMessage}`, 'error');
-                alert(`計算失敗：${errorMessage}`);
+            if (!params.company || !params.futureGrowth || !params.terminalGrowth || !params.wacc) {
+                alert('成長率和 WACC 為必填項。');
+                return;
             }
 
-            calculateBtn.disabled = false;
-            calculateBtn.textContent = '計算估值';
-        }
-
-        async function fetchAPI(url) {
+            const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            if (isNaN(currentPrice)) {
+                alert('請輸入有效的目前股價。');
+                return;
+            }
+            
+            // 呼叫 GAS 進行計算
+            calculateValuationBtn.disabled = true;
+            calculateValuationBtn.innerHTML = '<span class="loading-spinner"></span>計算中...';
+            dcfStatus.style.display = 'block';
+            dcfStatus.textContent = '正在計算估值...';
+            valuationResult.classList.add('hidden');
+            
+            const url = new URL(GOOGLE_APPS_SCRIPT_URL);
+            url.search = new URLSearchParams(params).toString();
+            
             try {
                 const response = await fetch(url);
-                if (!response.ok) throw new Error(`網路回應錯誤: ${response.statusText}`);
-                return await response.json();
-            } catch (error) {
-                console.error('Fetch API 失敗:', error);
-                return { success: false, message: error.message };
+                const result = await response.json();
+
+                if (result.success) {
+                    const fairValue = result.data.fairValue;
+                    displayValuationResult(fairValue, currentPrice);
+                    dcfStatus.innerHTML = '<p style="color: var(--color-success);">✅ 計算完成</p>';
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch(error) {
+                dcfStatus.innerHTML = `<p style="color: var(--color-error);">❌ 計算失敗: ${error.message}</p>`;
+            } finally {
+                calculateValuationBtn.disabled = false;
+                calculateValuationBtn.textContent = '📊 計算 DCF 估值';
             }
         }
 
         function displayValuationResult(fairValue, currentPrice) {
-            const resultDiv = document.getElementById('valuationResult');
-            const valueDiv = document.getElementById('calculatedValue');
-            const comparisonDiv = document.getElementById('priceComparison');
-
             const upside = ((fairValue - currentPrice) / currentPrice * 100);
             
-            // 根據估值結果選擇對應的圖標 (改為±10%)
+            // 根據估值結果選擇對應的圖標 (±10%)
             let trendIcon = '';
             let trendClass = '';
             let trendText = '';
             
-            if (Math.abs(upside) < 10) {  // 改為10%
+            if (Math.abs(upside) < 10) {
                 // 合理估值 (±10%以內)
                 trendIcon = '⚖️';
                 trendClass = 'trend-neutral';
@@ -853,37 +979,45 @@
                 trendText = '潛在下跌風險';
             }
 
-            valueDiv.innerHTML = `DCF 公允價值: $${fairValue.toFixed(2)}`;
-            comparisonDiv.innerHTML = `
+            document.getElementById('calculatedValue').innerHTML = `DCF 公允價值: $${fairValue.toFixed(2)}`;
+            document.getElementById('priceComparison').innerHTML = `
                 當前股價: $${currentPrice.toFixed(2)}<br>
                 <span class="${trendClass}">
                     <span class="result-icon">${trendIcon}</span>
                     ${trendText}: ${Math.abs(upside).toFixed(1)}%
                 </span>
             `;
-
-            resultDiv.classList.remove('hidden');
+            
+            valuationResult.classList.remove('hidden');
         }
 
-        function showStatus(message, type = 'info') {
-            const statusArea = document.getElementById('statusArea');
-            let icon = '';
+        function resetToStart() {
+            // 重置階段指示器
+            stage2Indicator.classList.remove('active');
+            stage1Indicator.classList.add('active');
+
+            // 切換介面
+            viewDcfCalculator.classList.add('hidden');
+            viewDataFetch.classList.remove('hidden');
             
-            switch(type) {
-                case 'loading':
-                    icon = '<span class="loading-spinner"></span>';
-                    break;
-                case 'success':
-                    icon = '✅ ';
-                    break;
-                case 'error':
-                    icon = '❌ ';
-                    break;
-                default:
-                    icon = 'ℹ️ ';
-            }
+            // 重置狀態
+            fetchDataBtn.disabled = false;
+            fetchDataBtn.textContent = '🚀 啟動 AI Agent 獲取財報';
+            fetchStatus.style.display = 'none';
+            fetchStatus.textContent = '';
+            tickerInput.value = '';
             
-            statusArea.innerHTML = `${icon}${message}`;
+            // 清空 DCF 表單
+            document.getElementById('futureGrowthRate').value = '';
+            document.getElementById('terminalGrowthRate').value = '';
+            document.getElementById('wacc').value = '';
+            document.getElementById('currentPrice').value = '';
+            document.getElementById('futureGrowthHint').textContent = '';
+            document.getElementById('terminalGrowthHint').textContent = '';
+            document.getElementById('waccHint').textContent = '';
+            
+            dcfStatus.style.display = 'none';
+            valuationResult.classList.add('hidden');
         }
     </script>
 </body>
