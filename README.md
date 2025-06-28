@@ -14,33 +14,6 @@
 ## 專案架構
 
 本系統由四個核心組件構成，各司其職，透過 API 和 Webhook 進行通訊：
-
-```mermaid
-graph TD
-    subgraph "使用者端 (Browser)"
-        A[前端應用 (HTML/JS)]
-    end
-
-    subgraph "後端邏輯 (Google Cloud)"
-        B[Google Apps Script (GAS)]
-    end
-
-    subgraph "數據處理 (n8n on Zeabur)"
-        C[n8n Webhook] --> D[Python Script via Execute Command]
-        D --> E[Loop Over Items]
-        E --> F[Google Sheets Node]
-    end
-
-    subgraph "數據庫 (Google Workspace)"
-        G[Google Sheets]
-    end
-
-    A -- "計算/查詢請求 (calculate/getCompanyData)" --> B
-    A -- "更新財報請求 (Webhook Trigger)" --> C
-    B -- "讀取/寫入" --> G
-    F -- "迭代寫入數據" --> G
-```
-
 1.  **前端應用 (Frontend)**: 使用者與系統互動的唯一入口。負責發起「估值計算」和「財報更新」的請求。
 2.  **Google Apps Script (GAS)**: 作為一個輕量級後端，處理前端的計算請求、讀取 Google Sheet 中的數據，並執行 DCF 核心公式。
 3.  **n8n 自動化工作流**: 系統的「數據引擎」。由前端的 Webhook 觸發，執行一個強大的 Python 腳本來獲取所有財務數據，然後將結果逐一寫入 Google Sheet。
